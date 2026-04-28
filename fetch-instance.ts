@@ -18,32 +18,12 @@ export const configure = (config: ClientConfig): void => {
 
 export const fetchInstance = async <T>(
   url: string,
-  {
-    method = 'GET',
-    params,
-    data,
-    headers: configHeaders,
-    signal,
-  }: {
-    method?: string;
-    params?: Record<string, unknown>;
-    data?: unknown;
-    headers?: Record<string, string>;
-    signal?: AbortSignal;
-  } = {},
+  options: RequestInit = {},
 ): Promise<T> => {
   const base = (_config.baseURL ?? '').replace(/\/$/, '');
-  const fullUrl = new URL(base + url);
+  const fullUrl = `${base}${url}`;
 
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        fullUrl.searchParams.append(key, String(value));
-      }
-    });
-  }
-
-  const headers = new Headers(configHeaders as HeadersInit | undefined);
+  const headers = new Headers(options.headers);
 
   const token = _config.getToken?.();
   if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -51,16 +31,7 @@ export const fetchInstance = async <T>(
   const extraHeaders = _config.getHeaders?.() ?? {};
   Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v));
 
-  if (data && !(data instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  const response = await fetch(fullUrl.toString(), {
-    method: method.toUpperCase(),
-    headers,
-    body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
-    signal,
-  });
+  const response = await fetch(fullUrl, { ...options, headers });
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
