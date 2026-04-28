@@ -23,8 +23,9 @@ export const fetchInstance = async <T>(config: {
   data?: unknown;
   headers?: Record<string, string>;
   signal?: AbortSignal;
-}): Promise<T> => {
-  const { url, method, params, data, headers: configHeaders, signal } = config;
+}, signal?: AbortSignal): Promise<T> => {
+  const { url, method, params, data, headers: configHeaders, signal: configSignal } = config;
+  const resolvedSignal = signal ?? configSignal;
 
   const base = (_config.baseURL ?? '').replace(/\/$/, '');
   const fullUrl = new URL(base + url);
@@ -53,7 +54,7 @@ export const fetchInstance = async <T>(config: {
     method: method.toUpperCase(),
     headers,
     body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
-    signal,
+    signal: resolvedSignal,
   });
 
   if (!response.ok) {
