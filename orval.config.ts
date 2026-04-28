@@ -9,6 +9,7 @@ const branch = process.env.BRANCH || 'develop';
 const specUrl = process.env.API_SPEC_URL || SPEC_URLS[branch] || SPEC_URLS.develop;
 
 export default defineConfig({
+  // Raw axios functions + types
   workflowApi: {
     input: {
       target: specUrl,
@@ -19,6 +20,35 @@ export default defineConfig({
       schemas: './src/model',
       client: 'axios',
       clean: true,
+      override: {
+        mutator: {
+          path: './src/axios-instance.ts',
+          name: 'axiosInstance',
+        },
+      },
+    },
+  },
+  // React Query hooks
+  workflowApiHooks: {
+    input: {
+      target: specUrl,
+    },
+    output: {
+      mode: 'single',
+      target: './src/hooks.ts',
+      schemas: './src/model',
+      client: 'react-query',
+      clean: false,
+      override: {
+        mutator: {
+          path: './src/axios-instance.ts',
+          name: 'axiosInstance',
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+        },
+      },
     },
   },
 });

@@ -112,8 +112,8 @@ jobs:
 
       - name: Verify generation succeeded
         run: |
-          if [ ! -f "src/endpoints.ts" ]; then
-            echo "❌ orval did not generate src/endpoints.ts — backend spec likely returned an error."
+          if [ ! -f "src/endpoints.ts" ] || [ ! -f "src/hooks.ts" ]; then
+            echo "❌ orval did not generate expected files — backend spec likely returned an error."
             echo "Check that ${{ env.API_SPEC_URL }} returns valid OpenAPI JSON."
             exit 1
           fi
@@ -124,7 +124,7 @@ jobs:
           BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           printf "export const CLIENT_VERSION = '%s';\nexport const BUILT_FROM = '%s';\nexport const BUILT_AT = '%s';\n" \
             "${VERSION}" "${{ inputs.source }}" "${BUILT_AT}" > src/version.ts
-          printf "export * from './endpoints';\nexport * from './model';\nexport * from './version';\n" > src/index.ts
+          printf "export * from './endpoints';\nexport * from './hooks';\nexport * from './model';\nexport * from './version';\nexport { axiosClient } from './axios-instance';\n" > src/index.ts
 
       - name: Update spec snapshot
         run: cp new-spec.json "${{ env.SNAPSHOT }}"
