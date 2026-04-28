@@ -9,7 +9,7 @@ const branch = process.env.BRANCH || 'develop';
 const specUrl = process.env.API_SPEC_URL || SPEC_URLS[branch] || SPEC_URLS.develop;
 
 export default defineConfig({
-  // Raw axios functions + types
+  // Raw fetch functions + types
   workflowApi: {
     input: {
       target: specUrl,
@@ -18,12 +18,12 @@ export default defineConfig({
       mode: 'single',
       target: './src/endpoints.ts',
       schemas: './src/model',
-      client: 'axios',
+      client: 'fetch',
       clean: true,
       override: {
         mutator: {
-          path: './axios-instance.ts',
-          name: 'axiosInstance',
+          path: './fetch-instance.ts',
+          name: 'fetchInstance',
         },
       },
     },
@@ -41,8 +41,8 @@ export default defineConfig({
       clean: false,
       override: {
         mutator: {
-          path: './axios-instance.ts',
-          name: 'axiosInstance',
+          path: './fetch-instance.ts',
+          name: 'fetchInstance',
         },
         query: {
           useQuery: true,
