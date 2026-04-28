@@ -16,17 +16,22 @@ export const configure = (config: ClientConfig): void => {
   _config = { ..._config, ...config };
 };
 
-export const fetchInstance = async <T>(config: {
-  url: string;
-  method: string;
-  params?: Record<string, unknown>;
-  data?: unknown;
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-}, signal?: AbortSignal): Promise<T> => {
-  const { url, method, params, data, headers: configHeaders, signal: configSignal } = config;
-  const resolvedSignal = signal ?? configSignal;
-
+export const fetchInstance = async <T>(
+  url: string,
+  {
+    method = 'GET',
+    params,
+    data,
+    headers: configHeaders,
+    signal,
+  }: {
+    method?: string;
+    params?: Record<string, unknown>;
+    data?: unknown;
+    headers?: Record<string, string>;
+    signal?: AbortSignal;
+  } = {},
+): Promise<T> => {
   const base = (_config.baseURL ?? '').replace(/\/$/, '');
   const fullUrl = new URL(base + url);
 
@@ -38,7 +43,7 @@ export const fetchInstance = async <T>(config: {
     });
   }
 
-  const headers = new Headers(configHeaders);
+  const headers = new Headers(configHeaders as HeadersInit | undefined);
 
   const token = _config.getToken?.();
   if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -54,7 +59,7 @@ export const fetchInstance = async <T>(config: {
     method: method.toUpperCase(),
     headers,
     body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
-    signal: resolvedSignal,
+    signal,
   });
 
   if (!response.ok) {
