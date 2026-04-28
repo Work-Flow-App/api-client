@@ -4279,39 +4279,6 @@ export const estimateGetByJob = async (jobId: number, options?: RequestInit): Pr
 
 
 
-export type invoiceListAllResponse200 = {
-  data: InvoiceResponse[]
-  status: 200
-}
-    
-export type invoiceListAllResponseSuccess = (invoiceListAllResponse200) & {
-  headers: Headers;
-};
-;
-
-export type invoiceListAllResponse = (invoiceListAllResponseSuccess)
-
-export const getInvoiceListAllUrl = () => {
-
-
-  
-
-  return `/api/v1/estimates/invoices`
-}
-
-export const invoiceListAll = async ( options?: RequestInit): Promise<invoiceListAllResponse> => {
-  
-  return fetchInstance<invoiceListAllResponse>(getInvoiceListAllUrl(),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-
-
-
 export type invoiceGetResponse200 = {
   data: InvoiceResponse
   status: 200

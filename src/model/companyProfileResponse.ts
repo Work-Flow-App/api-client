@@ -7,7 +7,6 @@
  */
 import type { CompanyAddressResponse } from './companyAddressResponse';
 import type { CompanyBankDetailsResponse } from './companyBankDetailsResponse';
-import type { CompanyProfileResponseCurrency } from './companyProfileResponseCurrency';
 
 export interface CompanyProfileResponse {
   id?: number;
@@ -21,7 +20,6 @@ export interface CompanyProfileResponse {
   contactNumber?: string;
   vatNumber?: string;
   bankDetails?: CompanyBankDetailsResponse;
-  currency?: CompanyProfileResponseCurrency;
   archived?: boolean;
   createdAt?: string;
   updatedAt?: string;

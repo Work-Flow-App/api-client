@@ -8,6 +8,7 @@
 
 export interface WorkerInviteResponse {
   email?: string;
+  token?: string;
   message?: string;
   expiresAt?: string;
 }

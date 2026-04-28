@@ -10,7 +10,7 @@ import type { JobCreateRequestFieldValues } from './jobCreateRequestFieldValues'
 import type { AddressRequest } from './addressRequest';
 
 export interface JobCreateRequest {
-  templateId: number;
+  templateId?: number;
   clientId?: number;
   customerId: number;
   assignedWorkerId?: number;

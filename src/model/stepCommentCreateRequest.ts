@@ -8,7 +8,6 @@
 import type { StepCommentCreateRequestType } from './stepCommentCreateRequestType';
 
 export interface StepCommentCreateRequest {
-  /** @minLength 1 */
-  content: string;
-  type: StepCommentCreateRequestType;
+  content?: string;
+  type?: StepCommentCreateRequestType;
 }

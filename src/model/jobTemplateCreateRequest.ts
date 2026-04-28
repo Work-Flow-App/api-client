@@ -7,8 +7,7 @@
  */
 
 export interface JobTemplateCreateRequest {
-  /** @minLength 1 */
-  name: string;
+  name?: string;
   description?: string;
   isDefault?: boolean;
 }

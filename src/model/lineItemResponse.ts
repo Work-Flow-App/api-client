@@ -20,7 +20,6 @@ export interface LineItemResponse {
   netAmount?: number;
   vatAmount?: number;
   totalAmount?: number;
-  invoiced?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

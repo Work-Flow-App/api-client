@@ -7,7 +7,6 @@
  */
 
 export interface WorkflowCreateRequest {
-  /** @minLength 1 */
-  name: string;
+  name?: string;
   description?: string;
 }

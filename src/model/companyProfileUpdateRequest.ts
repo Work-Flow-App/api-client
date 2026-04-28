@@ -7,7 +7,6 @@
  */
 import type { CompanyAddressRequest } from './companyAddressRequest';
 import type { CompanyBankDetailsRequest } from './companyBankDetailsRequest';
-import type { CompanyProfileUpdateRequestCurrency } from './companyProfileUpdateRequestCurrency';
 
 export interface CompanyProfileUpdateRequest {
   /**
@@ -52,5 +51,4 @@ export interface CompanyProfileUpdateRequest {
    */
   vatNumber?: string;
   bankDetails?: CompanyBankDetailsRequest;
-  currency?: CompanyProfileUpdateRequestCurrency;
 }
