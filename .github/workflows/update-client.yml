@@ -1,0 +1,199 @@
+name: Update API Client
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Generate from which backend?'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+      bump:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@work-flow-app'
+
+      - name: Set spec URL and publish tag
+        run: |
+          if [ "${{ inputs.source }}" = "prod" ]; then
+            echo "API_SPEC_URL=https://api.workfloow.app/api-docs" >> $GITHUB_ENV
+            echo "PUBLISH_TAG=latest" >> $GITHUB_ENV
+          else
+            echo "API_SPEC_URL=https://api.dev2.workfloow.app/api-docs" >> $GITHUB_ENV
+            echo "PUBLISH_TAG=dev" >> $GITHUB_ENV
+          fi
+
+      - name: Install oasdiff
+        run: |
+          curl -sSL https://raw.githubusercontent.com/tufin/oasdiff/main/install.sh | sh
+          echo "$HOME/.oasdiff/bin" >> $GITHUB_PATH
+
+      - name: Fetch new spec
+        run: curl -sf "${{ env.API_SPEC_URL }}" -o new-spec.json
+
+      - name: Check for existing spec snapshot
+        id: spec_exists
+        run: |
+          SNAPSHOT="spec/api-spec-${{ inputs.source }}.json"
+          if [ -f "$SNAPSHOT" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "SNAPSHOT=$SNAPSHOT" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            mkdir -p spec
+            cp new-spec.json "$SNAPSHOT"
+            echo "SNAPSHOT=$SNAPSHOT" >> $GITHUB_ENV
+          fi
+
+      - name: Detect breaking changes
+        if: steps.spec_exists.outputs.exists == 'true'
+        id: diff
+        run: |
+          oasdiff changelog "${{ env.SNAPSHOT }}" new-spec.json > diff-output.txt 2>&1 || true
+
+          BREAKING=$(oasdiff breaking "${{ env.SNAPSHOT }}" new-spec.json 2>&1 || true)
+
+          if [ -n "$BREAKING" ]; then
+            echo "has_breaking=true" >> $GITHUB_OUTPUT
+            echo "$BREAKING" > breaking-output.txt
+          else
+            echo "has_breaking=false" >> $GITHUB_OUTPUT
+          fi
+
+          cat diff-output.txt
+
+      - name: Block if breaking change with wrong bump
+        if: steps.diff.outputs.has_breaking == 'true' && inputs.bump != 'major'
+        run: |
+          echo "❌ Breaking changes detected but bump type is '${{ inputs.bump }}'."
+          echo "Re-run the workflow with bump = 'major'."
+          echo ""
+          echo "Breaking changes:"
+          cat breaking-output.txt
+          exit 1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump version
+        run: ./scripts/bump-version.sh ${{ inputs.bump }}
+
+      - name: Generate client
+        run: npm run generate
+        env:
+          API_SPEC_URL: ${{ env.API_SPEC_URL }}
+
+      - name: Verify generation succeeded
+        run: |
+          if [ ! -f "src/endpoints.ts" ]; then
+            echo "❌ orval did not generate src/endpoints.ts — backend spec likely returned an error."
+            echo "Check that ${{ env.API_SPEC_URL }} returns valid OpenAPI JSON."
+            exit 1
+          fi
+
+      - name: Write version metadata and index
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          printf "export const CLIENT_VERSION = '%s';\nexport const BUILT_FROM = '%s';\nexport const BUILT_AT = '%s';\n" \
+            "${VERSION}" "${{ inputs.source }}" "${BUILT_AT}" > src/version.ts
+          printf "export * from './endpoints';\nexport * from './model';\nexport * from './version';\n" > src/index.ts
+
+      - name: Update spec snapshot
+        run: cp new-spec.json "${{ env.SNAPSHOT }}"
+
+      - name: Generate changelog entry
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          BUMP=$(echo "${{ inputs.bump }}" | tr '[:lower:]' '[:upper:]')
+          SOURCE="${{ inputs.source }}"
+
+          {
+            echo "## v${VERSION} — ${BUMP} (${SOURCE}) — ${BUILT_AT}"
+            echo ""
+            if [ -f diff-output.txt ] && [ -s diff-output.txt ]; then
+              cat diff-output.txt
+            else
+              echo "No API shape changes detected."
+            fi
+            echo ""
+            echo "---"
+            echo ""
+          } > new-entry.md
+
+          if [ -f CHANGELOG.md ]; then
+            cat new-entry.md CHANGELOG.md > tmp.md && mv tmp.md CHANGELOG.md
+          else
+            mv new-entry.md CHANGELOG.md
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          VERSION=$(node -p "require('./package.json').version")
+          git commit -m "chore: generate client v${VERSION} (${{ inputs.source }})" || echo "nothing to commit"
+          git push origin main
+
+      - name: Publish to GitHub Packages
+        run: npm publish --tag ${{ env.PUBLISH_TAG }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SOURCE="${{ inputs.source }}"
+          BUMP="${{ inputs.bump }}"
+
+          if [ -f diff-output.txt ] && [ -s diff-output.txt ]; then
+            NOTES=$(cat diff-output.txt)
+          else
+            NOTES="No API shape changes."
+          fi
+
+          RELEASE_NOTES="**Source:** \`${SOURCE}\`
+          **Bump:** \`${BUMP}\`
+          **Install:** \`npm install @work-flow-app/api-client@${VERSION}\`
+
+          ### API Changes
+          ${NOTES}"
+
+          gh release create "v${VERSION}-${SOURCE}" \
+            --title "v${VERSION} (${SOURCE})" \
+            --notes "$RELEASE_NOTES" \
+            $( [ "$SOURCE" = "dev" ] && echo "--prerelease" )
