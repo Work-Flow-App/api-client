@@ -22,7 +22,7 @@ export default defineConfig({
       clean: true,
       override: {
         mutator: {
-          path: './src/axios-instance.ts',
+          path: './axios-instance.ts',
           name: 'axiosInstance',
         },
       },
@@ -41,7 +41,7 @@ export default defineConfig({
       clean: false,
       override: {
         mutator: {
-          path: './src/axios-instance.ts',
+          path: './axios-instance.ts',
           name: 'axiosInstance',
         },
         query: {
